@@ -1,0 +1,20 @@
+<page>
+  <view class="login-container">
+    <view class="login-header">
+      <text class="login-title">工作人员登录</text>
+    </view>
+    <view class="login-form">
+      <view class="form-item">
+        <input type="number" placeholder="请输入手机号" bindinput="handlePhoneInput" />
+        <text class="error-tip" wx:if="{{phoneError}}">{{phoneError}}</text>
+      </view>
+      <view class="form-item">
+        <input type="number" placeholder="请输入验证码" bindinput="handleCodeInput" />
+        <button class="send-code-btn" bindtap="handleSendCode">发送验证码</button>
+      </view>
+    </view>
+    <view class="login-btn">
+      <button bindtap="handleLogin">登录</button>
+    </view>
+  </view>
+</page>

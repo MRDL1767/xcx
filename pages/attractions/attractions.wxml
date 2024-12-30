@@ -1,0 +1,94 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <van-search
+    value="{{ searchKey }}"
+    placeholder="搜索项目"
+    bind:change="onSearch"
+    background="#f7f8fa"
+  />
+
+  <!-- 分类标签 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{activeTab === tab.id ? 'active' : ''}}"
+      wx:for="{{tabs}}" 
+      wx:key="id" 
+      wx:for-item="tab"
+      data-id="{{tab.id}}"
+      bindtap="onTabChange"
+    >
+      {{tab.name}}
+    </view>
+  </view>
+
+  <!-- 项目列表 -->
+  <view class="attractions-list">
+    <view wx:if="{{filteredAttractions.length === 0}}" class="empty-state">
+      <van-empty description="暂无相关项目" />
+    </view>
+    
+    <view 
+      class="attraction-card"
+      wx:for="{{filteredAttractions}}"
+      wx:key="id"
+      bindtap="navigateToDetail"
+      data-id="{{item.id}}"
+    >
+      <!-- 项目图片 -->
+      <view class="card-image">
+        <van-image
+          width="200rpx"
+          height="200rpx"
+          fit="cover"
+          src="{{item.image || '/images/default.png'}}"
+        />
+        <view class="status {{item.status === 'open' ? 'status-open' : 'status-closed'}}">
+          {{item.status === 'open' ? '开放中' : '已关闭'}}
+        </view>
+      </view>
+
+      <view class="card-content">
+        <view class="main-info">
+          <view class="name-tag">
+            <text class="name">{{item.name}}</text>
+            <view class="tags">
+              <van-tag 
+                wx:for="{{item.tags}}" 
+                wx:key="*this" 
+                wx:for-item="tag"
+                type="primary"
+                size="mini"
+                color="#f2826a"
+              >{{tag}}</van-tag>
+            </view>
+          </view>
+          
+          <view class="description">{{item.description}}</view>
+          
+          <view class="bottom-info">
+            <!-- 等待时间 -->
+            <view class="wait-time" wx:if="{{item.waitTime}}">
+              <van-icon name="clock-o" />
+              <text>等待: {{item.waitTime}}分钟</text>
+            </view>
+            
+            <!-- 价格信息 -->
+            <view class="price-info" wx:if="{{item.price !== undefined}}">
+              <text class="price">¥{{item.price}}</text>
+              <text class="unit">{{item.unit}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 提示信息 -->
+        <view 
+          class="notice-btn"
+          catchtap="showNotice"
+          data-notice="{{item.notice}}"
+        >
+          <van-icon name="info-o" size="36rpx" color="#f2826a"/>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

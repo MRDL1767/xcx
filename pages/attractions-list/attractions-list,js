@@ -1,0 +1,104 @@
+Page({
+  data: {
+    attractions: [], // 项目列表
+    page: 1, // 当前页码
+    pageSize: 10, // 每页显示的条数
+    hasMore: true, // 是否还有更多数据
+    loading: false // 加载中状态
+  },
+
+  onLoad() {
+    this.loadAttractions(true); // 初次加载
+  },
+
+  // 加载项目列表
+  loadAttractions(isInitial = false) {
+    if (this.data.loading) return; // 防止重复请求
+
+    this.setData({ loading: true });
+
+    wx.request({
+      url: 'your-api-url/attractions',
+      method: 'GET',
+      data: {
+        page: this.data.page,
+        pageSize: this.data.pageSize
+      },
+      success: (res) => {
+        if (res.statusCode === 200) {
+          const { data } = res; // 假定接口返回的数据结构为 { data: [...] }
+          const attractions = isInitial ? data : [...this.data.attractions, ...data];
+
+          this.setData({
+            attractions,
+            hasMore: data.length >= this.data.pageSize, // 判断是否还有更多数据
+            page: this.data.page + 1 // 增加页码
+          });
+
+          if (attractions.length === 0 && isInitial) {
+            wx.showToast({
+              title: '暂无数据',
+              icon: 'none'
+            });
+          }
+        } else {
+          wx.showToast({
+            title: '加载失败',
+            icon: 'error'
+          });
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '加载失败，请检查网络',
+          icon: 'error'
+        });
+      },
+      complete: () => {
+        this.setData({ loading: false });
+        if (isInitial) wx.stopPullDownRefresh(); // 停止下拉刷新
+      }
+    });
+  },
+
+  // 跳转到详情页
+  navigateToDetail(e) {
+    const { id } = e.currentTarget.dataset;
+
+    wx.navigateTo({
+      url: `/pages/attraction-detail/index?id=${id}`,
+      fail: () => {
+        wx.showModal({
+          title: '跳转失败',
+          content: '页面跳转失败，是否重试？',
+          success: (res) => {
+            if (res.confirm) {
+              this.navigateToDetail(e); // 重新尝试跳转
+            }
+          }
+        });
+      }
+    });
+  },
+
+  // 下拉刷新
+  onPullDownRefresh() {
+    this.setData({
+      page: 1,
+      hasMore: true
+    });
+    this.loadAttractions(true); // 重新加载数据
+  },
+
+  // 上拉加载更多
+  onReachBottom() {
+    if (this.data.hasMore) {
+      this.loadAttractions(false); // 分页加载更多数据
+    } else {
+      wx.showToast({
+        title: '没有更多数据',
+        icon: 'none'
+      });
+    }
+  }
+});

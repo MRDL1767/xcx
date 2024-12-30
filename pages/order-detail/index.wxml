@@ -1,0 +1,65 @@
+<view class="container">
+  <!-- 顶部订单状态 -->
+  <view class="order-status">
+    <text class="status-text">{{order.status}}</text>
+  </view>
+
+  <!-- 订单信息 -->
+  <view class="order-info">
+    <view class="info-item">
+      <text class="label">订单编号：</text>
+      <text class="value">{{order.orderNumber}}</text>
+    </view>
+    <view class="info-item">
+      <text class="label">下单时间：</text>
+      <text class="value">{{order.orderTime}}</text>
+    </view>
+    <view class="info-item">
+      <text class="label">项目名称：</text>
+      <text class="value">{{order.name}}</text>
+    </view>
+    <view class="info-item">
+      <text class="label">单价：</text>
+      <text class="value">¥{{order.price}}</text>
+    </view>
+    <view class="info-item">
+      <text class="label">数量：</text>
+      <text class="value">{{order.count}}</text>
+    </view>
+    <view class="info-item">
+      <text class="label">总价：</text>
+      <text class="value total">¥{{order.totalPrice}}</text>
+    </view>
+  </view>
+
+  <!-- 二维码区域 -->
+  <view wx:if="{{order.status === '待核销'}}" class="qr-code-section">
+    <text class="section-title">核销二维码</text>
+    <image
+      wx:if="{{qrCodeUrl}}"
+      class="qr-code"
+      src="{{qrCodeUrl}}"
+      mode="aspectFit"
+    ></image>
+    <text wx:else class="qr-placeholder">正在生成二维码...</text>
+    <button class="refresh-btn" bindtap="refreshQRCode">刷新二维码</button>
+  </view>
+
+  <!-- 底部操作按钮 -->
+  <view class="action-buttons">
+    <button
+      wx:if="{{order.status === '待付款'}}"
+      class="pay-btn"
+      bindtap="handlePay"
+    >
+      去支付
+    </button>
+    <button
+      wx:if="{{order.status === '已完成'}}"
+      class="repurchase-btn"
+      bindtap="handleRepurchase"
+    >
+      再次购买
+    </button>
+  </view>
+</view>

@@ -1,0 +1,25 @@
+<view class="container">
+  <view wx:if="{{attractions.length === 0 && !loading}}" class="empty-state">
+    <image class="empty-image" src="/images/empty.png"></image>
+    <text class="empty-text">暂无项目</text>
+  </view>
+
+  <view wx:else>
+    <scroll-view class="attractions-list" scroll-y>
+      <view
+        class="attraction-item"
+        wx:for="{{attractions}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="navigateToDetail"
+      >
+        <image class="item-image" src="{{item.image}}" mode="aspectFill"></image>
+        <view class="item-info">
+          <text class="item-title">{{item.name}}</text>
+          <text class="item-tags">{{item.category}}</text>
+          <text class="item-price">¥{{item.price}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

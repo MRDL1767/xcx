@@ -1,0 +1,75 @@
+<view class="container">
+  <!-- 轮播图 -->
+  <swiper class="banner" indicator-dots autoplay circular>
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <van-image width="100%" height="360rpx" src="{{item.image}}" />
+    </swiper-item>
+  </swiper>
+
+  <!-- 公告栏 -->
+  <van-notice-bar
+    left-icon="volume-o"
+    text="{{notice}}"
+    scrollable
+  />
+
+  <!-- 快捷功能区 -->
+  <van-grid column-num="4">
+    <van-grid-item icon="ticket-o" text="购票" bind:click="onBuyTicket" />
+    <van-grid-item icon="clock-o" text="排队信息" bind:click="onQueueInfo" />
+    <van-grid-item icon="location-o" text="园区地图" bind:click="onViewMap" />
+    <van-grid-item icon="service-o" text="游客服务" bind:click="onService" />
+  </van-grid>
+
+  <!-- 热门项目 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">热门项目</text>
+      <text class="section-more" bindtap="onMoreAttractions">更多</text>
+    </view>
+    <scroll-view scroll-x class="scroll-container">
+      <view class="scroll-item" wx:for="{{hotAttractions}}" wx:key="id" bindtap="onAttractionDetail" data-id="{{item.id}}">
+        <van-image width="240rpx" height="180rpx" src="{{item.image}}" />
+        <view class="item-title">{{item.name}}</view>
+        <view class="item-info">
+          <van-icon name="clock-o" />
+          <text>等待: {{item.waitTime}}分钟</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 特色活动 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">特色活动</text>
+      <text class="section-more" bindtap="onMoreActivities">更多</text>
+    </view>
+    <view class="activity-list">
+      <van-card
+        wx:for="{{activities}}"
+        wx:key="id"
+        desc="{{item.time}}"
+        title="{{item.name}}"
+        thumb="{{item.image}}"
+        bindtap="onActivityDetail"
+        data-id="{{item.id}}"
+      >
+        <view slot="tags">
+          <van-tag type="primary" wx:if="{{item.isNew}}">新活动</van-tag>
+          <van-tag type="warning" wx:if="{{item.isHot}}">热门</van-tag>
+        </view>
+      </van-card>
+    </view>
+  </view>
+</view>
+<view class="container">
+  <view class="header">
+    <image class="header-bg" src="/assets/images/home-bg.jpg" mode="aspectFill"></image>
+    <view class="welcome-text">欢迎来到游客服务中心</view>
+  </view>
+
+  <view class="service-center-entry">
+    <button class="entry-button" bindtap="navigateToServiceCenter">进入服务中心</button>
+  </view>
+</view>

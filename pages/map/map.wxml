@@ -1,0 +1,20 @@
+<view class="map-container">
+  <map 
+    id="myMap"
+    class="map"
+    latitude="{{latitude}}"
+    longitude="{{longitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    show-location="true">
+  </map>
+
+  <view class="info-card">
+    <view class="park-info">
+      <view class="park-name">新袖田园</view>
+      <view class="park-address">和田市拉斯奎镇G580国道旁4号</view>
+      <view class="distance" wx:if="{{distance}}">距您: {{distance}}</view>
+    </view>
+    <button class="nav-btn" bindtap="openLocation">导航到这里</button>
+  </view>
+</view>

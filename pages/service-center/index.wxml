@@ -1,0 +1,15 @@
+<view class="container">
+  <!-- 服务中心标题 -->
+  <view class="title">服务中心</view>
+
+  <!-- 服务网格布局 -->
+  <view class="service-grid">
+    <block wx:for="{{services}}" wx:key="id">
+      <view class="service-item" data-page="{{item.page}}" bindtap="navigateToService">
+        <!-- 使用图标库的组件 -->
+        <icon-mini type="{{item.icon}}" size="60" color="#4CAF50" />
+        <text class="service-name">{{item.name}}</text>
+      </view>
+    </block>
+  </view>
+</view>

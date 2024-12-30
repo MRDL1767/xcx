@@ -1,0 +1,67 @@
+.container {
+  padding-bottom: 30rpx;
+}
+
+.banner {
+  height: 360rpx;
+}
+
+.section {
+  margin-top: 20rpx;
+  padding: 0 20rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.section-more {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.scroll-container {
+  white-space: nowrap;
+}
+
+.scroll-item {
+  display: inline-block;
+  margin-right: 20rpx;
+  width: 240rpx;
+}
+
+.item-title {
+  font-size: 28rpx;
+  margin: 10rpx 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-info {
+  font-size: 24rpx;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.item-info van-icon {
+  margin-right: 6rpx;
+}
+
+.activity-list {
+  margin-top: 10rpx;
+}
+
+.activity-list .van-card {
+  margin-bottom: 10rpx;
+  background: #ffffff;
+}

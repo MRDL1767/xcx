@@ -1,0 +1,7 @@
+<page>
+  <view>
+    <input type="number" placeholder="请输入手机号" bindinput="handlePhoneInput" />
+    <input type="number" placeholder="请输入验证码" bindinput="handleCodeInput" />
+    <button bindtap="handleLogin">登录</button>
+  </view>
+</page>

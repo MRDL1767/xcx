@@ -1,0 +1,24 @@
+<view class="container">
+  <!-- 服务标题和描述 -->
+  <view class="header">
+    <icon-mini type="{{icon}}" size="80" color="#FFFFFF" />
+    <text class="service-name">{{serviceName}}</text>
+    <text class="service-description">{{serviceDescription}}</text>
+  </view>
+
+  <!-- 动态表单 -->
+  <view class="form">
+    <block wx:for="{{formFields}}" wx:key="key">
+      <view class="form-item">
+        <text class="form-label">{{item.name}}</text>
+        <input
+          class="form-input"
+          placeholder="{{item.placeholder}}"
+          data-key="{{item.key}}"
+          bindinput="onInputChange"
+        />
+      </view>
+    </block>
+    <button class="submit-button" bindtap="submitForm">提交申请</button>
+  </view>
+</view>

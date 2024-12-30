@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "pages/attraction-list/index",
+    "pages/attraction-detail/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "项目列表",
+    "navigationBarTextStyle": "black",
+    "enablePullDownRefresh": true
+  }
+}

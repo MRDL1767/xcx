@@ -1,0 +1,13 @@
+<view class="container">
+  <text class="title">{{attraction.name}}</text>
+  <text class="description">{{attraction.description}}</text>
+  <text class="price">¥{{attraction.price}}</text>
+
+  <view class="quantity-control">
+    <button data-action="decrease" bindtap="changeCount">-</button>
+    <text>{{count}}</text>
+    <button data-action="increase" bindtap="changeCount">+</button>
+  </view>
+
+  <button class="pay-btn" bindtap="handlePayment">立即支付</button>
+</view>

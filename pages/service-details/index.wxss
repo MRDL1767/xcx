@@ -1,0 +1,63 @@
+.container {
+  background-color: #f8f8f8;
+  min-height: 100vh;
+  padding: 20rpx;
+}
+
+.header {
+  background-color: #4caf50;
+  padding: 40rpx;
+  border-radius: 10rpx;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.service-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-top: 10rpx;
+}
+
+.service-description {
+  font-size: 28rpx;
+  margin-top: 10rpx;
+}
+
+.form {
+  background-color: #fff;
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.form-item {
+  margin-bottom: 20rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  margin-bottom: 10rpx;
+  color: #333;
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 10rpx;
+}
+
+.submit-button {
+  width: 100%;
+  height: 80rpx;
+  background-color: #4caf50;
+  color: #fff;
+  font-size: 28rpx;
+  text-align: center;
+  line-height: 80rpx;
+  border-radius: 10rpx;
+  margin-top: 20rpx;
+}
