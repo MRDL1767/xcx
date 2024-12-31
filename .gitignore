@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Windows
 [Dd]esktop.ini
 Thumbs.db
@@ -12,3 +13,23 @@ $RECYCLE.BIN/
 
 # Node.js
 node_modules/
+=======
+# Build and Release Folders
+bin-debug/
+bin-release/
+[Oo]bj/
+[Bb]in/
+
+# Other files and folders
+.settings/
+
+# Executables
+*.swf
+*.air
+*.ipa
+*.apk
+
+# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
+# should NOT be excluded as they contain compiler settings and other important
+# information for Eclipse / Flash Builder.
+>>>>>>> 22aed0358e1bdf2891da8d32752a6801d14856fc
