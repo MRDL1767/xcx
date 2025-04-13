@@ -1,0 +1,1196 @@
+# 汽车维修管理系统 - 基于Python和SQLite
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import sqlite3
+from datetime import datetime
+import pandas as pd
+import os
+import calendar
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import jieba
+import time
+
+class CarRepairManagementSystem:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("汽车维修管理系统")
+        self.root.geometry("1200x700")
+        self.root.configure(bg="#f0f0f0")
+        
+        # 初始化数据库
+        self.conn = self.init_database()
+        
+        # 创建主框架
+        self.create_main_frame()
+        
+        # 设置选项卡控件
+        self.create_tabs()
+        
+        # 设置默认选项卡
+        self.notebook.select(0)  # 默认显示第一个选项卡
+        
+    def init_database(self):
+        """初始化SQLite数据库"""
+        conn = sqlite3.connect('car_repair_management.db')
+        cursor = conn.cursor()
+        
+        # 创建车辆信息表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS vehicles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plate_number TEXT NOT NULL,
+            vehicle_type TEXT,
+            owner_name TEXT,
+            owner_phone TEXT,
+            insurance_company TEXT,
+            policy_number TEXT,
+            entry_date TEXT,
+            completion_date TEXT,
+            status TEXT DEFAULT '处理中',
+            description TEXT,
+            repair_costs REAL DEFAULT 0,
+            insurance_claim REAL DEFAULT 0,
+            payment_status TEXT DEFAULT '未付款'
+        )
+        ''')
+        
+        # 创建维修项目表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS repair_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            item_name TEXT,
+            item_price REAL,
+            item_status TEXT DEFAULT '未完成',
+            start_date TEXT,
+            completion_date TEXT,
+            technician TEXT,
+            notes TEXT,
+            FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        )
+        ''')
+        
+        # 创建财务交易表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS financial_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            transaction_date TEXT,
+            amount REAL,
+            transaction_type TEXT,  -- 收入/支出
+            payment_method TEXT,
+            description TEXT,
+            insurance_related INTEGER DEFAULT 0,  -- 0表示非保险相关，1表示保险相关
+            FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        )
+        ''')
+        
+        # 创建保险索赔表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS insurance_claims (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            claim_number TEXT,
+            claim_date TEXT,
+            claim_amount REAL,
+            approved_amount REAL DEFAULT 0,
+            claim_status TEXT DEFAULT '处理中',
+            payment_date TEXT,
+            payment_received REAL DEFAULT 0,
+            notes TEXT,
+            FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        )
+        ''')
+        
+        # 创建喷漆记录表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS paint_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            paint_type TEXT,
+            paint_color TEXT,
+            paint_area TEXT,
+            start_date TEXT,
+            completion_date TEXT,
+            technician TEXT,
+            material_cost REAL DEFAULT 0,
+            labor_cost REAL DEFAULT 0,
+            total_cost REAL DEFAULT 0,
+            status TEXT DEFAULT '未完成',
+            notes TEXT,
+            FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        )
+        ''')
+        
+        # 创建待办任务表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER,
+            task_name TEXT,
+            description TEXT,
+            due_date TEXT,
+            priority TEXT,
+            status TEXT DEFAULT '未完成',
+            assigned_to TEXT,
+            creation_date TEXT,
+            completion_date TEXT,
+            FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        )
+        ''')
+        
+        conn.commit()
+        return conn
+        
+    def create_main_frame(self):
+        """创建主框架"""
+        # 设置标题栏
+        title_frame = tk.Frame(self.root, bg="#3498db", height=50)
+        title_frame.pack(fill="x")
+        
+        title_label = tk.Label(
+            title_frame, 
+            text="汽车维修管理系统", 
+            font=("Arial", 16, "bold"), 
+            bg="#3498db", 
+            fg="white"
+        )
+        title_label.pack(pady=10)
+        
+        # 设置状态栏
+        self.status_bar = tk.Label(
+            self.root, 
+            text="就绪", 
+            bd=1, 
+            relief=tk.SUNKEN, 
+            anchor=tk.W
+        )
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+    def create_tabs(self):
+        """创建选项卡控件"""
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # 创建各个选项卡
+        self.create_dashboard_tab()
+        self.create_vehicle_reception_tab()
+        self.create_repair_management_tab()
+        self.create_paint_management_tab()
+        self.create_insurance_tab()
+        self.create_financial_tab()
+        self.create_reports_tab()
+        self.create_tasks_tab()
+        
+    def create_dashboard_tab(self):
+        """创建仪表盘选项卡"""
+        dashboard_frame = ttk.Frame(self.notebook)
+        self.notebook.add(dashboard_frame, text="仪表盘")
+        
+        # 欢迎信息
+        welcome_frame = tk.Frame(dashboard_frame, bg="#ffffff", padx=20, pady=20)
+        welcome_frame.pack(fill="x", padx=10, pady=10)
+        
+        tk.Label(
+            welcome_frame, 
+            text="欢迎使用汽车维修管理系统", 
+            font=("Arial", 14, "bold"), 
+            bg="#ffffff"
+        ).pack()
+        
+        tk.Label(
+            welcome_frame, 
+            text="今日日期: " + datetime.now().strftime("%Y年%m月%d日"), 
+            font=("Arial", 12), 
+            bg="#ffffff"
+        ).pack(pady=5)
+        
+        # 统计信息框架
+        stats_frame = tk.Frame(dashboard_frame, bg="#ffffff")
+        stats_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # 左侧统计信息
+        left_stats = tk.Frame(stats_frame, bg="#ffffff", padx=20, pady=20)
+        left_stats.pack(side="left", fill="both", expand=True)
+        
+        # 当前处理中的车辆
+        processing_frame = tk.LabelFrame(left_stats, text="当前处理中的车辆", padx=10, pady=10, bg="#ffffff")
+        processing_frame.pack(fill="both", expand=True, pady=10)
+        
+        # 待办任务提醒
+        task_frame = tk.LabelFrame(left_stats, text="待办任务提醒", padx=10, pady=10, bg="#ffffff")
+        task_frame.pack(fill="both", expand=True, pady=10)
+        
+        # 右侧统计信息
+        right_stats = tk.Frame(stats_frame, bg="#ffffff", padx=20, pady=20)
+        right_stats.pack(side="right", fill="both", expand=True)
+        
+        # 今日财务概览
+        finance_frame = tk.LabelFrame(right_stats, text="今日财务概览", padx=10, pady=10, bg="#ffffff")
+        finance_frame.pack(fill="both", expand=True, pady=10)
+        
+        # 保险索赔状态
+        insurance_frame = tk.LabelFrame(right_stats, text="保险索赔状态", padx=10, pady=10, bg="#ffffff")
+        insurance_frame.pack(fill="both", expand=True, pady=10)
+        
+        # 添加刷新按钮
+        refresh_button = tk.Button(
+            dashboard_frame, 
+            text="刷新数据", 
+            command=self.refresh_dashboard,
+            bg="#3498db",
+            fg="white",
+            padx=10,
+            pady=5
+        )
+        refresh_button.pack(pady=10)
+        
+        # 初始化仪表盘数据
+        self.refresh_dashboard()
+        
+    def refresh_dashboard(self):
+        """刷新仪表盘数据"""
+        self.status_bar.config(text="正在刷新仪表盘数据...")
+        # 这里应该有更新仪表盘各个部分的代码
+        self.status_bar.config(text="仪表盘数据已更新 - " + datetime.now().strftime("%H:%M:%S"))
+        
+    def create_vehicle_reception_tab(self):
+        """创建车辆接待选项卡"""
+        reception_frame = ttk.Frame(self.notebook)
+        self.notebook.add(reception_frame, text="车辆接待")
+        
+        # 分为左右两部分
+        left_frame = tk.Frame(reception_frame, padx=10, pady=10)
+        left_frame.pack(side="left", fill="both", expand=True)
+        
+        right_frame = tk.Frame(reception_frame, padx=10, pady=10)
+        right_frame.pack(side="right", fill="both", expand=True)
+        
+        # 左侧：添加新车辆
+        entry_frame = tk.LabelFrame(left_frame, text="新车辆登记", padx=10, pady=10)
+        entry_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # 车牌号
+        tk.Label(entry_frame, text="车牌号:").grid(row=0, column=0, sticky="w", pady=5)
+        plate_entry = tk.Entry(entry_frame, width=30)
+        plate_entry.grid(row=0, column=1, sticky="w", pady=5)
+        
+        # 车型
+        tk.Label(entry_frame, text="车型:").grid(row=1, column=0, sticky="w", pady=5)
+        type_entry = tk.Entry(entry_frame, width=30)
+        type_entry.grid(row=1, column=1, sticky="w", pady=5)
+        
+        # 车主姓名
+        tk.Label(entry_frame, text="车主姓名:").grid(row=2, column=0, sticky="w", pady=5)
+        owner_entry = tk.Entry(entry_frame, width=30)
+        owner_entry.grid(row=2, column=1, sticky="w", pady=5)
+        
+        # 联系电话
+        tk.Label(entry_frame, text="联系电话:").grid(row=3, column=0, sticky="w", pady=5)
+        phone_entry = tk.Entry(entry_frame, width=30)
+        phone_entry.grid(row=3, column=1, sticky="w", pady=5)
+        
+        # 保险公司
+        tk.Label(entry_frame, text="保险公司:").grid(row=4, column=0, sticky="w", pady=5)
+        insurance_entry = tk.Entry(entry_frame, width=30)
+        insurance_entry.grid(row=4, column=1, sticky="w", pady=5)
+        
+        # 保单号
+        tk.Label(entry_frame, text="保单号:").grid(row=5, column=0, sticky="w", pady=5)
+        policy_entry = tk.Entry(entry_frame, width=30)
+        policy_entry.grid(row=5, column=1, sticky="w", pady=5)
+        
+        # 入厂日期
+        tk.Label(entry_frame, text="入厂日期:").grid(row=6, column=0, sticky="w", pady=5)
+        entry_date = tk.Entry(entry_frame, width=30)
+        entry_date.insert(0, datetime.now().strftime("%Y-%m-%d"))
+        entry_date.grid(row=6, column=1, sticky="w", pady=5)
+        
+        # 故障描述
+        tk.Label(entry_frame, text="故障描述:").grid(row=7, column=0, sticky="w", pady=5)
+        description_text = tk.Text(entry_frame, width=30, height=5)
+        description_text.grid(row=7, column=1, sticky="w", pady=5)
+        
+        # 提交按钮
+        submit_button = tk.Button(
+            entry_frame, 
+            text="登记车辆", 
+            bg="#2ecc71", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=lambda: self.register_vehicle(
+                plate_entry.get(),
+                type_entry.get(),
+                owner_entry.get(),
+                phone_entry.get(),
+                insurance_entry.get(),
+                policy_entry.get(),
+                entry_date.get(),
+                description_text.get("1.0", tk.END)
+            )
+        )
+        submit_button.grid(row=8, column=0, columnspan=2, pady=10)
+        
+        # 清空按钮
+        clear_button = tk.Button(
+            entry_frame, 
+            text="清空表单", 
+            bg="#e74c3c", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=lambda: self.clear_form([
+                plate_entry, type_entry, owner_entry, phone_entry,
+                insurance_entry, policy_entry
+            ], description_text)
+        )
+        clear_button.grid(row=9, column=0, columnspan=2, pady=5)
+        
+        # 右侧：车辆列表
+        list_frame = tk.LabelFrame(right_frame, text="在厂车辆列表", padx=10, pady=10)
+        list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # 搜索框
+        search_frame = tk.Frame(list_frame)
+        search_frame.pack(fill="x", pady=5)
+        
+        tk.Label(search_frame, text="搜索:").pack(side="left")
+        search_entry = tk.Entry(search_frame, width=30)
+        search_entry.pack(side="left", padx=5)
+        
+        search_button = tk.Button(
+            search_frame, 
+            text="搜索", 
+            bg="#3498db", 
+            fg="white",
+            command=lambda: self.search_vehicle(search_entry.get())
+        )
+        search_button.pack(side="left", padx=5)
+        
+        # 车辆列表
+        columns = ("车牌号", "车型", "车主", "状态", "入厂日期")
+        self.vehicle_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
+        
+        # 设置列宽和标题
+        for col in columns:
+            self.vehicle_tree.heading(col, text=col)
+            self.vehicle_tree.column(col, width=100)
+        
+        self.vehicle_tree.pack(fill="both", expand=True, pady=5)
+        
+        # 滚动条
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.vehicle_tree.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.vehicle_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # 操作按钮
+        button_frame = tk.Frame(list_frame)
+        button_frame.pack(fill="x", pady=5)
+        
+        view_button = tk.Button(
+            button_frame,
+            text="查看详情",
+            bg="#3498db",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.view_vehicle_details
+        )
+        view_button.pack(side="left", padx=5)
+        
+        edit_button = tk.Button(
+            button_frame,
+            text="编辑信息",
+            bg="#f39c12",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.edit_vehicle
+        )
+        edit_button.pack(side="left", padx=5)
+        
+        delete_button = tk.Button(
+            button_frame,
+            text="删除车辆",
+            bg="#e74c3c",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.delete_vehicle
+        )
+        delete_button.pack(side="left", padx=5)
+        
+        # 加载车辆列表
+        self.load_vehicles()
+    
+    def register_vehicle(self, plate, vehicle_type, owner, phone, insurance, policy, entry_date, description):
+        """注册新车辆"""
+        if not plate:
+            messagebox.showerror("错误", "车牌号不能为空")
+            return
+            
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            INSERT INTO vehicles (
+                plate_number, vehicle_type, owner_name, owner_phone,
+                insurance_company, policy_number, entry_date, description, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                plate, vehicle_type, owner, phone,
+                insurance, policy, entry_date, description, "处理中"
+            ))
+            self.conn.commit()
+            
+            # 创建相关的默认待办任务
+            vehicle_id = cursor.lastrowid
+            self.create_default_tasks(vehicle_id, plate)
+            
+            messagebox.showinfo("成功", f"车辆 {plate} 已成功登记")
+            self.load_vehicles()  # 刷新车辆列表
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def create_default_tasks(self, vehicle_id, plate_number):
+        """为新车辆创建默认待办任务"""
+        today = datetime.now().strftime("%Y-%m-%d")
+        tomorrow = (datetime.now() + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        default_tasks = [
+            (vehicle_id, f"初步检查 - {plate_number}", "对车辆进行初步检查并评估损伤", today, "高", "未完成", "技术人员"),
+            (vehicle_id, f"联系保险 - {plate_number}", "联系保险公司并启动理赔流程", today, "高", "未完成", "接待员"),
+            (vehicle_id, f"制定维修计划 - {plate_number}", "根据检查结果制定详细维修计划", tomorrow, "中", "未完成", "技术主管"),
+            (vehicle_id, f"与车主确认 - {plate_number}", "与车主确认维修计划和预估费用", tomorrow, "中", "未完成", "接待员")
+        ]
+        
+        cursor = self.conn.cursor()
+        for task in default_tasks:
+            cursor.execute('''
+            INSERT INTO tasks (
+                vehicle_id, task_name, description, due_date, priority, status, assigned_to, creation_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (*task, today))
+        
+        self.conn.commit()
+    
+    def clear_form(self, entry_fields, text_field=None):
+        """清空表单字段"""
+        for field in entry_fields:
+            field.delete(0, tk.END)
+        
+        if text_field:
+            text_field.delete("1.0", tk.END)
+    
+    def load_vehicles(self):
+        """加载车辆列表"""
+        # 清空现有项
+        for item in self.vehicle_tree.get_children():
+            self.vehicle_tree.delete(item)
+            
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            SELECT plate_number, vehicle_type, owner_name, status, entry_date
+            FROM vehicles
+            WHERE status != '已完成'
+            ORDER BY entry_date DESC
+            ''')
+            
+            for row in cursor.fetchall():
+                self.vehicle_tree.insert("", "end", values=row)
+                
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def search_vehicle(self, search_text):
+        """搜索车辆"""
+        # 清空现有项
+        for item in self.vehicle_tree.get_children():
+            self.vehicle_tree.delete(item)
+            
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            SELECT plate_number, vehicle_type, owner_name, status, entry_date
+            FROM vehicles
+            WHERE plate_number LIKE ? OR owner_name LIKE ? OR vehicle_type LIKE ?
+            ORDER BY entry_date DESC
+            ''', (f'%{search_text}%', f'%{search_text}%', f'%{search_text}%'))
+            
+            for row in cursor.fetchall():
+                self.vehicle_tree.insert("", "end", values=row)
+                
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def view_vehicle_details(self):
+        """查看车辆详情"""
+        selected_item = self.vehicle_tree.selection()
+        if not selected_item:
+            messagebox.showinfo("提示", "请先选择一辆车")
+            return
+            
+        # 获取选中的车牌号
+        plate_number = self.vehicle_tree.item(selected_item[0], 'values')[0]
+        
+        # 打开详情窗口
+        self.open_vehicle_details(plate_number)
+    
+    def open_vehicle_details(self, plate_number):
+        """打开车辆详情窗口"""
+        detail_window = tk.Toplevel(self.root)
+        detail_window.title(f"车辆详情 - {plate_number}")
+        detail_window.geometry("800x600")
+        
+        # 这里添加详情窗口的具体实现
+        tk.Label(detail_window, text=f"车辆详情: {plate_number}", font=("Arial", 14, "bold")).pack(pady=10)
+        
+        # 占位用，实际应用中应该显示车辆的详细信息
+        tk.Label(detail_window, text="详细信息将在这里显示").pack(pady=20)
+    
+    def edit_vehicle(self):
+        """编辑车辆信息"""
+        selected_item = self.vehicle_tree.selection()
+        if not selected_item:
+            messagebox.showinfo("提示", "请先选择一辆车")
+            return
+            
+        # 获取选中的车牌号
+        plate_number = self.vehicle_tree.item(selected_item[0], 'values')[0]
+        
+        # 打开编辑窗口
+        self.open_edit_vehicle_window(plate_number)
+    
+    def open_edit_vehicle_window(self, plate_number):
+        """打开编辑车辆窗口"""
+        # 获取车辆信息
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM vehicles WHERE plate_number = ?", (plate_number,))
+        vehicle = cursor.fetchone()
+        
+        if not vehicle:
+            messagebox.showerror("错误", "找不到该车辆信息")
+            return
+            
+        # 创建编辑窗口
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title(f"编辑车辆 - {plate_number}")
+        edit_window.geometry("500x600")
+        
+        # 表单框架
+        form_frame = tk.Frame(edit_window, padx=20, pady=20)
+        form_frame.pack(fill="both", expand=True)
+        
+        # 车辆ID（隐藏）
+        vehicle_id = vehicle[0]
+        
+        # 车牌号
+        tk.Label(form_frame, text="车牌号:").grid(row=0, column=0, sticky="w", pady=5)
+        plate_entry = tk.Entry(form_frame, width=30)
+        plate_entry.insert(0, vehicle[1])  # plate_number
+        plate_entry.grid(row=0, column=1, sticky="w", pady=5)
+        
+        # 车型
+        tk.Label(form_frame, text="车型:").grid(row=1, column=0, sticky="w", pady=5)
+        type_entry = tk.Entry(form_frame, width=30)
+        type_entry.insert(0, vehicle[2] if vehicle[2] else "")  # vehicle_type
+        type_entry.grid(row=1, column=1, sticky="w", pady=5)
+        
+        # 车主姓名
+        tk.Label(form_frame, text="车主姓名:").grid(row=2, column=0, sticky="w", pady=5)
+        owner_entry = tk.Entry(form_frame, width=30)
+        owner_entry.insert(0, vehicle[3] if vehicle[3] else "")  # owner_name
+        owner_entry.grid(row=2, column=1, sticky="w", pady=5)
+        
+        # 联系电话
+        tk.Label(form_frame, text="联系电话:").grid(row=3, column=0, sticky="w", pady=5)
+        phone_entry = tk.Entry(form_frame, width=30)
+        phone_entry.insert(0, vehicle[4] if vehicle[4] else "")  # owner_phone
+        phone_entry.grid(row=3, column=1, sticky="w", pady=5)
+        
+        # 保险公司
+        tk.Label(form_frame, text="保险公司:").grid(row=4, column=0, sticky="w", pady=5)
+        insurance_entry = tk.Entry(form_frame, width=30)
+        insurance_entry.insert(0, vehicle[5] if vehicle[5] else "")  # insurance_company
+        insurance_entry.grid(row=4, column=1, sticky="w", pady=5)
+        
+        # 保单号
+        tk.Label(form_frame, text="保单号:").grid(row=5, column=0, sticky="w", pady=5)
+        policy_entry = tk.Entry(form_frame, width=30)
+        policy_entry.insert(0, vehicle[6] if vehicle[6] else "")  # policy_number
+        policy_entry.grid(row=5, column=1, sticky="w", pady=5)
+        
+        # 入厂日期
+        tk.Label(form_frame, text="入厂日期:").grid(row=6, column=0, sticky="w", pady=5)
+        entry_date = tk.Entry(form_frame, width=30)
+        entry_date.insert(0, vehicle[7] if vehicle[7] else "")  # entry_date
+        entry_date.grid(row=6, column=1, sticky="w", pady=5)
+        
+        # 完工日期
+        tk.Label(form_frame, text="完工日期:").grid(row=7, column=0, sticky="w", pady=5)
+        completion_date = tk.Entry(form_frame, width=30)
+        completion_date.insert(0, vehicle[8] if vehicle[8] else "")  # completion_date
+        completion_date.grid(row=7, column=1, sticky="w", pady=5)
+        
+        # 状态
+        tk.Label(form_frame, text="状态:").grid(row=8, column=0, sticky="w", pady=5)
+        status_var = tk.StringVar(value=vehicle[9] if vehicle[9] else "处理中")  # status
+        status_options = ["处理中", "等待配件", "维修中", "已完成", "已交车"]
+        status_menu = tk.OptionMenu(form_frame, status_var, *status_options)
+        status_menu.grid(row=8, column=1, sticky="w", pady=5)
+        
+        # 故障描述
+        tk.Label(form_frame, text="故障描述:").grid(row=9, column=0, sticky="w", pady=5)
+        description_text = tk.Text(form_frame, width=30, height=5)
+        if vehicle[10]:  # description
+            description_text.insert("1.0", vehicle[10])
+        description_text.grid(row=9, column=1, sticky="w", pady=5)
+        
+        # 维修费用
+        tk.Label(form_frame, text="维修费用:").grid(row=10, column=0, sticky="w", pady=5)
+        repair_costs_entry = tk.Entry(form_frame, width=30)
+        repair_costs_entry.insert(0, str(vehicle[11]) if vehicle[11] else "0")  # repair_costs
+        repair_costs_entry.grid(row=10, column=1, sticky="w", pady=5)
+        
+        # 保险理赔金额
+        tk.Label(form_frame, text="保险理赔金额:").grid(row=11, column=0, sticky="w", pady=5)
+        insurance_claim_entry = tk.Entry(form_frame, width=30)
+        insurance_claim_entry.insert(0, str(vehicle[12]) if vehicle[12] else "0")  # insurance_claim
+        insurance_claim_entry.grid(row=11, column=1, sticky="w", pady=5)
+        
+        # 付款状态
+        tk.Label(form_frame, text="付款状态:").grid(row=12, column=0, sticky="w", pady=5)
+        payment_var = tk.StringVar(value=vehicle[13] if vehicle[13] else "未付款")  # payment_status
+        payment_options = ["未付款", "部分付款", "已付款"]
+        payment_menu = tk.OptionMenu(form_frame, payment_var, *payment_options)
+        payment_menu.grid(row=12, column=1, sticky="w", pady=5)
+        
+        # 保存按钮
+        save_button = tk.Button(
+            form_frame, 
+            text="保存修改", 
+            bg="#2ecc71", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=lambda: self.save_vehicle_edits(
+                vehicle_id,
+                plate_entry.get(),
+                type_entry.get(),
+                owner_entry.get(),
+                phone_entry.get(),
+                insurance_entry.get(),
+                policy_entry.get(),
+                entry_date.get(),
+                completion_date.get(),
+                status_var.get(),
+                description_text.get("1.0", tk.END),
+                repair_costs_entry.get(),
+                insurance_claim_entry.get(),
+                payment_var.get(),
+                edit_window
+            )
+        )
+        save_button.grid(row=13, column=0, columnspan=2, pady=10)
+        
+        # 取消按钮
+        cancel_button = tk.Button(
+            form_frame, 
+            text="取消", 
+            bg="#e74c3c", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=edit_window.destroy
+        )
+        cancel_button.grid(row=14, column=0, columnspan=2, pady=5)
+    
+    def save_vehicle_edits(self, vehicle_id, plate, vehicle_type, owner, phone, insurance, policy, 
+                          entry_date, completion_date, status, description, repair_costs, 
+                          insurance_claim, payment_status, window):
+        """保存车辆编辑"""
+        try:
+            # 转换费用为浮点数
+            try:
+                repair_costs = float(repair_costs)
+                insurance_claim = float(insurance_claim)
+            except ValueError:
+                messagebox.showerror("错误", "费用必须为数字")
+                return
+                
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            UPDATE vehicles SET 
+                plate_number = ?, vehicle_type = ?, owner_name = ?, owner_phone = ?,
+                insurance_company = ?, policy_number = ?, entry_date = ?, completion_date = ?,
+                status = ?, description = ?, repair_costs = ?, insurance_claim = ?, payment_status = ?
+            WHERE id = ?
+            ''', (
+                plate, vehicle_type, owner, phone, insurance, policy, 
+                entry_date, completion_date, status, description, 
+                repair_costs, insurance_claim, payment_status, vehicle_id
+            ))
+            self.conn.commit()
+            
+            messagebox.showinfo("成功", f"车辆 {plate} 信息已更新")
+            window.destroy()
+            self.load_vehicles()  # 刷新车辆列表
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def delete_vehicle(self):
+        """删除车辆信息"""
+        selected_item = self.vehicle_tree.selection()
+        if not selected_item:
+            messagebox.showinfo("提示", "请先选择一辆车")
+            return
+            
+        # 获取选中的车牌号
+        plate_number = self.vehicle_tree.item(selected_item[0], 'values')[0]
+        
+        # 确认删除
+        confirm = messagebox.askyesno("确认删除", f"确定要删除车辆 {plate_number} 吗？此操作不可撤销！")
+        if not confirm:
+            return
+            
+        try:
+            cursor = self.conn.cursor()
+            
+            # 首先获取车辆ID
+            cursor.execute("SELECT id FROM vehicles WHERE plate_number = ?", (plate_number,))
+            vehicle = cursor.fetchone()
+            
+            if not vehicle:
+                messagebox.showerror("错误", "找不到该车辆信息")
+                return
+                
+            vehicle_id = vehicle[0]
+            
+            # 删除关联的所有记录
+            cursor.execute("DELETE FROM repair_items WHERE vehicle_id = ?", (vehicle_id,))
+            cursor.execute("DELETE FROM financial_transactions WHERE vehicle_id = ?", (vehicle_id,))
+            cursor.execute("DELETE FROM insurance_claims WHERE vehicle_id = ?", (vehicle_id,))
+            cursor.execute("DELETE FROM paint_jobs WHERE vehicle_id = ?", (vehicle_id,))
+            cursor.execute("DELETE FROM tasks WHERE vehicle_id = ?", (vehicle_id,))
+            
+            # 最后删除车辆记录
+            cursor.execute("DELETE FROM vehicles WHERE id = ?", (vehicle_id,))
+            
+            self.conn.commit()
+            messagebox.showinfo("成功", f"车辆 {plate_number} 及其所有相关记录已删除")
+            self.load_vehicles()  # 刷新车辆列表
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def create_repair_management_tab(self):
+        """创建维修管理选项卡"""
+        repair_frame = ttk.Frame(self.notebook)
+        self.notebook.add(repair_frame, text="维修管理")
+        
+        # 分为上下两部分
+        top_frame = tk.Frame(repair_frame, padx=10, pady=10)
+        top_frame.pack(fill="both", expand=True)
+        
+        bottom_frame = tk.Frame(repair_frame, padx=10, pady=10)
+        bottom_frame.pack(fill="both", expand=True)
+        
+        # 上部分：车辆选择和基本信息
+        selection_frame = tk.LabelFrame(top_frame, text="选择车辆", padx=10, pady=10)
+        selection_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # 车辆选择下拉框
+        tk.Label(selection_frame, text="选择车辆:").grid(row=0, column=0, sticky="w", pady=5)
+        self.repair_vehicle_var = tk.StringVar()
+        self.repair_vehicle_combobox = ttk.Combobox(selection_frame, textvariable=self.repair_vehicle_var, width=30)
+        self.repair_vehicle_combobox.grid(row=0, column=1, sticky="w", pady=5)
+        
+        # 加载按钮
+        load_button = tk.Button(
+            selection_frame, 
+            text="加载维修项目", 
+            bg="#3498db", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.load_repair_items
+        )
+        load_button.grid(row=0, column=2, padx=10, pady=5)
+        
+        # 车辆信息显示
+        info_frame = tk.LabelFrame(selection_frame, text="车辆信息", padx=10, pady=5)
+        info_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=10)
+        
+        # 显示车辆基本信息的标签
+        self.vehicle_info_label = tk.Label(info_frame, text="请先选择一辆车")
+        self.vehicle_info_label.pack(fill="x", pady=5)
+        
+        # 下部分：维修项目管理
+        item_frame = tk.LabelFrame(bottom_frame, text="维修项目管理", padx=10, pady=10)
+        item_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # 左侧：维修项目列表
+        left_item_frame = tk.Frame(item_frame)
+        left_item_frame.pack(side="left", fill="both", expand=True)
+        
+        # 维修项目列表
+        columns = ("项目名称", "价格", "状态", "开始日期", "完成日期", "技师")
+        self.repair_item_tree = ttk.Treeview(left_item_frame, columns=columns, show="headings")
+        
+        # 设置列宽和标题
+        for col in columns:
+            self.repair_item_tree.heading(col, text=col)
+            self.repair_item_tree.column(col, width=80)
+        
+        self.repair_item_tree.pack(fill="both", expand=True, pady=5)
+        
+        # 滚动条
+        scrollbar = ttk.Scrollbar(left_item_frame, orient="vertical", command=self.repair_item_tree.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.repair_item_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # 按钮
+        button_frame = tk.Frame(left_item_frame)
+        button_frame.pack(fill="x", pady=5)
+        
+        add_button = tk.Button(
+            button_frame,
+            text="添加项目",
+            bg="#2ecc71",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.add_repair_item
+        )
+        add_button.pack(side="left", padx=5)
+        
+        edit_button = tk.Button(
+            button_frame,
+            text="编辑项目",
+            bg="#f39c12",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.edit_repair_item
+        )
+        edit_button.pack(side="left", padx=5)
+        
+        delete_button = tk.Button(
+            button_frame,
+            text="删除项目",
+            bg="#e74c3c",
+            fg="white",
+            padx=10,
+            pady=5,
+            command=self.delete_repair_item
+        )
+        delete_button.pack(side="left", padx=5)
+        
+        # 右侧：添加/编辑维修项目表单
+        right_item_frame = tk.Frame(item_frame)
+        right_item_frame.pack(side="right", fill="both", expand=True, padx=10)
+        
+        # 加载车辆下拉框
+        self.load_vehicle_combobox()
+        
+    def load_vehicle_combobox(self):
+        """加载车辆下拉框"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            SELECT plate_number FROM vehicles
+            WHERE status != '已完成'
+            ORDER BY entry_date DESC
+            ''')
+            
+            vehicles = [row[0] for row in cursor.fetchall()]
+            self.repair_vehicle_combobox['values'] = vehicles
+            
+            if vehicles:
+                self.repair_vehicle_combobox.current(0)  # 默认选择第一个
+                
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def load_repair_items(self):
+        """加载选中车辆的维修项目"""
+        plate_number = self.repair_vehicle_var.get()
+        if not plate_number:
+            messagebox.showinfo("提示", "请先选择一辆车")
+            return
+            
+        # 更新车辆信息显示
+        self.update_vehicle_info_display(plate_number)
+        
+        # 清空现有维修项目
+        for item in self.repair_item_tree.get_children():
+            self.repair_item_tree.delete(item)
+            
+        try:
+            cursor = self.conn.cursor()
+            
+            # 首先获取车辆ID
+            cursor.execute("SELECT id FROM vehicles WHERE plate_number = ?", (plate_number,))
+            vehicle = cursor.fetchone()
+            
+            if not vehicle:
+                messagebox.showerror("错误", "找不到该车辆信息")
+                return
+                
+            vehicle_id = vehicle[0]
+            
+            # 查询维修项目
+            cursor.execute('''
+            SELECT item_name, item_price, item_status, start_date, completion_date, technician
+            FROM repair_items
+            WHERE vehicle_id = ?
+            ORDER BY start_date DESC
+            ''', (vehicle_id,))
+            
+            for row in cursor.fetchall():
+                self.repair_item_tree.insert("", "end", values=row)
+                
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def update_vehicle_info_display(self, plate_number):
+        """更新车辆信息显示"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            SELECT vehicle_type, owner_name, owner_phone, entry_date, status
+            FROM vehicles
+            WHERE plate_number = ?
+            ''', (plate_number,))
+            
+            vehicle = cursor.fetchone()
+            
+            if vehicle:
+                info_text = f"车牌: {plate_number} | 车型: {vehicle[0]} | 车主: {vehicle[1]} | 电话: {vehicle[2]} | 入厂日期: {vehicle[3]} | 状态: {vehicle[4]}"
+                self.vehicle_info_label.config(text=info_text)
+            else:
+                self.vehicle_info_label.config(text="找不到车辆信息")
+                
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def add_repair_item(self):
+        """添加维修项目"""
+        plate_number = self.repair_vehicle_var.get()
+        if not plate_number:
+            messagebox.showinfo("提示", "请先选择一辆车")
+            return
+            
+        # 获取车辆ID
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id FROM vehicles WHERE plate_number = ?", (plate_number,))
+        vehicle = cursor.fetchone()
+        
+        if not vehicle:
+            messagebox.showerror("错误", "找不到该车辆信息")
+            return
+            
+        vehicle_id = vehicle[0]
+        
+        # 创建添加项目窗口
+        self.open_add_repair_item_window(vehicle_id, plate_number)
+    
+    def open_add_repair_item_window(self, vehicle_id, plate_number):
+        """打开添加维修项目窗口"""
+        add_window = tk.Toplevel(self.root)
+        add_window.title(f"添加维修项目 - {plate_number}")
+        add_window.geometry("400x500")
+        
+        # 表单框架
+        form_frame = tk.Frame(add_window, padx=20, pady=20)
+        form_frame.pack(fill="both", expand=True)
+        
+        # 项目名称
+        tk.Label(form_frame, text="项目名称:").grid(row=0, column=0, sticky="w", pady=5)
+        item_name_entry = tk.Entry(form_frame, width=30)
+        item_name_entry.grid(row=0, column=1, sticky="w", pady=5)
+        
+        # 项目价格
+        tk.Label(form_frame, text="项目价格:").grid(row=1, column=0, sticky="w", pady=5)
+        item_price_entry = tk.Entry(form_frame, width=30)
+        item_price_entry.grid(row=1, column=1, sticky="w", pady=5)
+        
+        # 项目状态
+        tk.Label(form_frame, text="项目状态:").grid(row=2, column=0, sticky="w", pady=5)
+        status_var = tk.StringVar(value="未完成")
+        status_options = ["未完成", "进行中", "已完成"]
+        status_menu = tk.OptionMenu(form_frame, status_var, *status_options)
+        status_menu.grid(row=2, column=1, sticky="w", pady=5)
+        
+        # 开始日期
+        tk.Label(form_frame, text="开始日期:").grid(row=3, column=0, sticky="w", pady=5)
+        start_date_entry = tk.Entry(form_frame, width=30)
+        start_date_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
+        start_date_entry.grid(row=3, column=1, sticky="w", pady=5)
+        
+        # 完成日期
+        tk.Label(form_frame, text="完成日期:").grid(row=4, column=0, sticky="w", pady=5)
+        completion_date_entry = tk.Entry(form_frame, width=30)
+        completion_date_entry.grid(row=4, column=1, sticky="w", pady=5)
+        
+        # 技师
+        tk.Label(form_frame, text="技师:").grid(row=5, column=0, sticky="w", pady=5)
+        technician_entry = tk.Entry(form_frame, width=30)
+        technician_entry.grid(row=5, column=1, sticky="w", pady=5)
+        
+        # 备注
+        tk.Label(form_frame, text="备注:").grid(row=6, column=0, sticky="w", pady=5)
+        notes_text = tk.Text(form_frame, width=30, height=5)
+        notes_text.grid(row=6, column=1, sticky="w", pady=5)
+        
+        # 保存按钮
+        save_button = tk.Button(
+            form_frame, 
+            text="保存项目", 
+            bg="#2ecc71", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=lambda: self.save_repair_item(
+                vehicle_id,
+                item_name_entry.get(),
+                item_price_entry.get(),
+                status_var.get(),
+                start_date_entry.get(),
+                completion_date_entry.get(),
+                technician_entry.get(),
+                notes_text.get("1.0", tk.END),
+                add_window
+            )
+        )
+        save_button.grid(row=7, column=0, columnspan=2, pady=10)
+        
+        # 取消按钮
+        cancel_button = tk.Button(
+            form_frame, 
+            text="取消", 
+            bg="#e74c3c", 
+            fg="white",
+            padx=10,
+            pady=5,
+            command=add_window.destroy
+        )
+        cancel_button.grid(row=8, column=0, columnspan=2, pady=5)
+    
+    def save_repair_item(self, vehicle_id, item_name, item_price, item_status, start_date, 
+                       completion_date, technician, notes, window):
+        """保存维修项目"""
+        if not item_name:
+            messagebox.showerror("错误", "项目名称不能为空")
+            return
+            
+        try:
+            # 转换价格为浮点数
+            try:
+                item_price = float(item_price) if item_price else 0
+            except ValueError:
+                messagebox.showerror("错误", "价格必须为数字")
+                return
+                
+            cursor = self.conn.cursor()
+            cursor.execute('''
+            INSERT INTO repair_items (
+                vehicle_id, item_name, item_price, item_status, start_date, completion_date, technician, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                vehicle_id, item_name, item_price, item_status, start_date, 
+                completion_date, technician, notes
+            ))
+            self.conn.commit()
+            
+            # 更新车辆总维修费用
+            self.update_vehicle_repair_costs(vehicle_id)
+            
+            messagebox.showinfo("成功", f"维修项目 {item_name} 已添加")
+            window.destroy()
+            self.load_repair_items()  # 刷新维修项目列表
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def update_vehicle_repair_costs(self, vehicle_id):
+        """更新车辆总维修费用"""
+        try:
+            cursor = self.conn.cursor()
+            
+            # 计算维修项目总费用
+            cursor.execute('''
+            SELECT SUM(item_price) FROM repair_items WHERE vehicle_id = ?
+            ''', (vehicle_id,))
+            
+            result = cursor.fetchone()
+            total_cost = result[0] if result[0] else 0
+            
+            # 更新车辆记录
+            cursor.execute('''
+            UPDATE vehicles SET repair_costs = ? WHERE id = ?
+            ''', (total_cost, vehicle_id))
+            
+            self.conn.commit()
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("数据库错误", str(e))
+    
+    def edit_repair_item(self):
+        """编辑维修项目"""
+        selected_item = self.repair_item_tree.selection()
+        if not selected_item:
+            messagebox.showinfo("提示", "请先选择一个维修项目")
+            return
+            
+        # 获取选中的项目信息
+        item_values = self.repair_item_tree.item(selected_item[0], 'values')
+        item_name = item_values[0]
+        
+        # 获取车辆ID
+        plate_number = self.repair_vehicle_var.get()
+        
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id FROM vehicles WHERE plate_number = ?", (plate_number,))
+        vehicle = cursor.fetchone()
+        
+        if not vehicle:
+            messagebox.showerror("错误", "找不到该车辆信息")
+            return
+            
+        vehicle_id = vehicle[0]
+        
+        # 获取项目ID
+        cursor.execute('''
+        SELECT id FROM repair_items WHERE vehicle_id = ? AND item_name = ?
+        ''', (vehicle_id, item_name))
+        
+        item = cursor.fetchone()
+        if not item:
+            messagebox.showerror("错误", "找不到该维修项目信息")
+            return
+            
+        item_id = item[0]
+        
+        # 打开编辑窗口
+        self.open_edit_repair_item_window(item_id, vehicle_id, plate_number)
+    
+    def open_edit_repair_item_window(self, item_id, vehicle_id, plate_number):
+        """打开编辑维修项目窗口"""
+        # 获取维修项目信息
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM repair_items WHERE id = ?", (item_id,))
+        item = cursor.fetchone()
+        
+        if not item:
+            messagebox.showerror("错误", "找不到该维修项目信息")
+            return
+            
+        # 创建编辑窗口
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title(f"编辑维修项目 - {
